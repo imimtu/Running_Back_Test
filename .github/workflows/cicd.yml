@@ -40,6 +40,35 @@ jobs:
           push: true
           tags: lsheon0927/runapp:latest
 
+#  deploy:
+#    needs: build-and-test
+#    if: github.ref == 'refs/heads/main'
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Deploy to Server via SSH
+#        uses: appleboy/ssh-action@master
+#        with:
+#          host: ${{ secrets.SERVER_HOST }}
+#          username: ${{ secrets.SERVER_USER }}
+#          key: ${{ secrets.SSH_PRIVATE_KEY }}
+#          port: 2222
+#          script: |
+#            # Docker Hub 로그인
+#            echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+#
+#            # Docker Hub에서 최신 이미지를 풀받기
+#            docker pull lsheon0927/runapp:latest
+#
+#            # 기존 컨테이너 중지 및 제거
+#            docker stop runapp-container || true
+#            docker rm runapp-container || true
+#
+#            # 새 컨테이너 실행
+#            docker run -d --name runapp-container -p 8080:8080 lsheon0927/runapp:latest
+#
+#            # 사용하지 않는 이미지 정리
+#            docker image prune -f
   deploy:
     needs: build-and-test
     if: github.ref == 'refs/heads/main'
@@ -54,18 +83,54 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
           script: |
+            # 프로젝트 디렉토리로 이동
+            mkdir -p ~/running-app
+            cd ~/running-app
+
             # Docker Hub 로그인
             echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-  
-            # Docker Hub에서 최신 이미지를 풀받기
-            docker pull lsheon0927/runapp:latest
-            
-            # 기존 컨테이너 중지 및 제거
-            docker stop runapp-container || true
-            docker rm runapp-container || true
-            
-            # 새 컨테이너 실행
-            docker run -d --name runapp-container -p 8080:8080 lsheon0927/runapp:latest
-            
+
+            # docker-compose.yml 파일 생성 (민감 정보는 환경 변수로 전달)
+            cat > docker-compose.yml << 'EOL'
+            version: '3'
+            services:
+              app:
+                image: lsheon0927/runapp:latest
+                ports:
+                  - "8080:8080"
+                depends_on:
+                  - postgres
+                environment:
+                  - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+                  - SPRING_DATASOURCE_USERNAME=${DB_USER}
+                  - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+
+              postgres:
+                image: postgres:14
+                ports:
+                  - "5432:5432"
+                environment:
+                  - POSTGRES_DB=${DB_NAME}
+                  - POSTGRES_USER=${DB_USER}
+                  - POSTGRES_PASSWORD=${DB_PASSWORD}
+                volumes:
+                  - postgres-data:/var/lib/postgresql/data
+
+            volumes:
+              postgres-data:
+            EOL
+
+            # .env 파일 생성 (민감한 정보는 GitHub Secrets에서 가져옴)
+            cat > .env << EOL
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            EOL
+
+            # Docker Compose 실행
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d
+
             # 사용하지 않는 이미지 정리
             docker image prune -f
