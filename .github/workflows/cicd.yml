@@ -38,7 +38,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: lsheon0927/runApp:latest
+          tags: lsheon0927/runapp:latest
 
   deploy:
     needs: build-and-test
@@ -58,14 +58,14 @@ jobs:
             echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
   
             # Docker Hub에서 최신 이미지를 풀받기
-            docker pull lsheon0927/runApp:latest
+            docker pull lsheon0927/runapp:latest
             
             # 기존 컨테이너 중지 및 제거
-            docker stop runApp-container || true
-            docker rm runApp-container || true
+            docker stop runapp-container || true
+            docker rm runapp-container || true
             
             # 새 컨테이너 실행
-            docker run -d --name runApp-container -p 8080:8080 lsheon0927/runApp:latest
+            docker run -d --name runapp-container -p 8080:8080 lsheon0927/runapp:latest
             
             # 사용하지 않는 이미지 정리
             docker image prune -f
