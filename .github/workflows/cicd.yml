@@ -97,7 +97,7 @@ jobs:
               app:
                 image: lsheon0927/runapp:latest
                 ports:
-                  - "8080:8080"
+                  - "9000:8080"
                 depends_on:
                   - postgres
                 environment:
