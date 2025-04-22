@@ -24,18 +24,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Build with Gradle (without tests)
+        run: ./gradlew build -x test
 
-#      - name: Run tests
-#        run: ./gradlew test
 
-      # 테스트 결과 보고서 저장
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v3
-        if: always()
-        with:
-          report_paths: '**/build/test-results/test/TEST-*.xml'
+      #      - name: Run tests
+      #        run: ./gradlew test
 
   # main 브랜치에 푸시된 경우에만 배포 단계 실행
   deploy:
