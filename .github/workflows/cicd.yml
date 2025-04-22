@@ -51,6 +51,11 @@ jobs:
       - name: Build deployable package
         run: ./gradlew bootJar
 
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -63,3 +68,5 @@ jobs:
             git pull origin main
             docker-compose down
             docker-compose up -d --build
+            ssh -v -i ~/.ssh/github-actions lsheon0927@192.168.45.34 -p 2222
+          
