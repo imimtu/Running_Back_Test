@@ -1,0 +1,26 @@
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME:-running_db}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-runningapp}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+
+  postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${DB_NAME:-running_db}
+      - POSTGRES_USER=${DB_USER:-runningapp}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
