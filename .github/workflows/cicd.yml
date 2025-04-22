@@ -59,7 +59,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
           script: |
-            cd ~/Running_Back_Test
             # Docker 컨테이너에서 Git pull을 수행
             docker-compose exec -T app git pull origin main
             docker-compose down
