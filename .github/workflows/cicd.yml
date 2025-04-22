@@ -51,11 +51,6 @@ jobs:
       - name: Build deployable package
         run: ./gradlew bootJar
 
-      - name: Set up SSH key
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -65,6 +60,8 @@ jobs:
           port: 2222
           script: |
             cd ~/Running_Back_Test
-            git pull origin main
+            # Docker 컨테이너에서 Git pull을 수행
+            docker-compose exec -T app git pull origin main
             docker-compose down
             docker-compose up -d --build
+  
