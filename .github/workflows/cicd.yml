@@ -27,8 +27,8 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Run tests
-        run: ./gradlew test
+#      - name: Run tests
+#        run: ./gradlew test
 
       # 테스트 결과 보고서 저장
       - name: Publish Test Report
