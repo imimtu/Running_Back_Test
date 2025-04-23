@@ -1,36 +1,3 @@
-#spring:
-#  datasource:
-#    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/running_db}
-#    username: ${SPRING_DATASOURCE_USERNAME:runningapp}
-#    password: ${SPRING_DATASOURCE_PASSWORD:password}
-#  jpa:
-#    hibernate:
-#      ddl-auto: update
-#  elasticsearch:
-#    rest:
-#      uris: ${SPRING_ELASTICSEARCH_REST_URIS:http://localhost:9200}
-#
-## Actuator 설정
-#management:
-#  endpoints:
-#    web:
-#      exposure:
-#        include: prometheus,health,info,metrics
-#  endpoint:
-#    health:
-#      show-details: always
-#    prometheus:
-#      enabled: true
-#
-## 로깅 설정
-#logging:
-#  file:
-#    name: ./logs/app.log
-#  level:
-#    root: INFO
-#    org.springframework: INFO
-#    org.example.running_test: DEBUG
-
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/running_db}

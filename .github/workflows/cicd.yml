@@ -33,20 +33,77 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build and push Docker image
+      # 브랜치에 따라 다른 태그 사용
+      - name: Build and push Docker image for develop
+        if: github.ref == 'refs/heads/develop'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: lsheon0927/runapp:dev
+
+      - name: Build and push Docker image for main
+        if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: lsheon0927/runapp:latest
 
-  deploy:
+  # 개발 환경 배포 (develop 브랜치)
+  deploy-dev:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Development Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DEV_SERVER_PORT }}
+          script: |
+            # 프로젝트 디렉토리로 이동
+            mkdir -p ~/running-app-dev
+            cd ~/running-app-dev
+
+            # 필요한 설정 파일 복사 (레포에서 직접 가져오거나 필요한 파일 생성)
+            curl -O https://raw.githubusercontent.com/username/repo/develop/docker-compose-dev.yml
+            
+            # 환경 변수 파일 생성
+            cat > .env.dev << EOL
+            DB_NAME=${{ secrets.DEV_DB_NAME }}
+            DB_USER=${{ secrets.DEV_DB_USER }}
+            DB_PASSWORD=${{ secrets.DEV_DB_PASSWORD }}
+            ELASTIC_VERSION=7.17.9
+            APP_PORT=8080
+            SPRING_PROFILES_ACTIVE=dev
+            EOL
+
+            # Docker Hub 로그인
+            echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
+            # Docker Compose 실행 (개발 환경 설정)
+            docker-compose -f docker-compose-dev.yml --env-file .env.dev down
+            docker-compose -f docker-compose-dev.yml --env-file .env.dev pull
+            docker-compose -f docker-compose-dev.yml --env-file .env.dev up -d
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -f
+
+  # 운영 환경 배포 (main 브랜치)
+  deploy-prod:
     needs: build-and-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Server via SSH
+      - name: Deploy to Production Server via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -61,8 +118,8 @@ jobs:
             # Docker Hub 로그인
             echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
-            # docker-compose.yml 파일 생성 (민감 정보는 환경 변수로 전달)
-            cat > docker-compose.yml << 'EOL'
+            # docker-compose-prod.yml 파일 생성
+            cat > docker-compose-prod.yml << 'EOL'
             version: '3'
             services:
               app:
@@ -72,9 +129,13 @@ jobs:
                 depends_on:
                   - postgres
                 environment:
+                  - SPRING_PROFILES_ACTIVE=prod
                   - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
                   - SPRING_DATASOURCE_USERNAME=${DB_USER}
                   - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+                restart: always
+                volumes:
+                  - ./logs:/app/logs
 
               postgres:
                 image: postgres:14
@@ -85,23 +146,26 @@ jobs:
                   - POSTGRES_USER=${DB_USER}
                   - POSTGRES_PASSWORD=${DB_PASSWORD}
                 volumes:
-                  - postgres-data:/var/lib/postgresql/data
+                  - postgres-prod-data:/var/lib/postgresql/data
+                restart: always
 
             volumes:
-              postgres-data:
+              postgres-prod-data:
             EOL
 
-            # .env 파일 생성 (민감한 정보는 GitHub Secrets에서 가져옴)
-            cat > .env << EOL
+            # .env.prod 파일 생성
+            cat > .env.prod << EOL
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            APP_PORT=9000
+            SPRING_PROFILES_ACTIVE=prod
             EOL
 
-            # Docker Compose 실행
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d
+            # Docker Compose 실행 (운영 환경 설정)
+            docker-compose -f docker-compose-prod.yml --env-file .env.prod down
+            docker-compose -f docker-compose-prod.yml --env-file .env.prod pull
+            docker-compose -f docker-compose-prod.yml --env-file .env.prod up -d
 
             # 사용하지 않는 이미지 정리
             docker image prune -f
