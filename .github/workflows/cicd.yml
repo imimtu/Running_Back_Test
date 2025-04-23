@@ -2,9 +2,9 @@ name: Spring Boot CI/CD
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ main ]
   pull_request:
-    branches: [ develop, main ]
+    branches: [ main ]
 
 jobs:
   build-and-test:
@@ -33,17 +33,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      # 브랜치에 따라 다른 태그 사용
-      - name: Build and push Docker image for develop
-        if: github.ref == 'refs/heads/develop'
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: lsheon0927/runapp:dev
-
-      - name: Build and push Docker image for main
-        if: github.ref == 'refs/heads/main'
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -53,7 +43,6 @@ jobs:
   # 운영 환경 배포 (main 브랜치)
   deploy-prod:
     needs: build-and-test
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
