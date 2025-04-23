@@ -50,52 +50,6 @@ jobs:
           push: true
           tags: lsheon0927/runapp:latest
 
-  # 개발 환경 배포 (develop 브랜치)
-  deploy-dev:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy to Development Server via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.DEV_SERVER_PORT }}
-          script: |
-            # 프로젝트 디렉토리로 이동
-            mkdir -p ~/running-app-dev
-            cd ~/running-app-dev
-
-            # 필요한 설정 파일 복사 (레포에서 직접 가져오거나 필요한 파일 생성)
-            curl -O https://raw.githubusercontent.com/username/repo/develop/docker-compose-dev.yml
-            
-            # 환경 변수 파일 생성
-            cat > .env.dev << EOL
-            DB_NAME=${{ secrets.DEV_DB_NAME }}
-            DB_USER=${{ secrets.DEV_DB_USER }}
-            DB_PASSWORD=${{ secrets.DEV_DB_PASSWORD }}
-            ELASTIC_VERSION=7.17.9
-            APP_PORT=8080
-            SPRING_PROFILES_ACTIVE=dev
-            EOL
-
-            # Docker Hub 로그인
-            echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-
-            # Docker Compose 실행 (개발 환경 설정)
-            docker-compose -f docker-compose-dev.yml --env-file .env.dev down
-            docker-compose -f docker-compose-dev.yml --env-file .env.dev pull
-            docker-compose -f docker-compose-dev.yml --env-file .env.dev up -d
-
-            # 사용하지 않는 이미지 정리
-            docker image prune -f
-
   # 운영 환경 배포 (main 브랜치)
   deploy-prod:
     needs: build-and-test
